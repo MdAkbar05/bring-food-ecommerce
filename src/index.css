@@ -1,0 +1,28 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  .nav-link {
+    @apply relative after:h-0.5 after:absolute after:left-0 after:-bottom-0.5 after:rounded-full after:bg-transparent after:hover:bg-[#ff1b54] after:transition-all after:w-full after:duration-300;
+  }
+  .defaultBtn {
+    @apply bg-red-500 hover:bg-red-700 text-white py-2 px-4 rounded-md;
+  }
+}
+
+.flexCenter {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.heroSec {
+  background-image: url("./assets/herosec.jpg");
+  background-size: cover;
+  background-position: center;
+  height: 60vh;
+  display: flex;
+  justify-content: center;
+  align-items: start;
+}
