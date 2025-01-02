@@ -1,6 +1,6 @@
 # Bring FOOD E-commerce Website
 
-![Protfolio Website](https://github.com/MdAkbar05/bring-food-ecommerce/blob/main/web_ss.png)
+![Protfolio Website](https://github.com/MdAkbar05/bring-food-ecommerce/blob/main/image.png)
 
 <br/>
 
