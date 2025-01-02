@@ -1,50 +1,69 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { searchFoods } from "../../features/foodSlice";
-// Update the path to where your foodSlice is located
+import { useLocation, useNavigate } from "react-router-dom";
 
-const Search = () => {
-  const [term, setTerm] = useState("");
+import { toast } from "react-toastify";
+import { fetchFoodById } from "../../features/foodSlice";
+import Searching from "../Skeleton/Searching";
+
+const SearchPage = () => {
+  const notify = (msg) => toast(msg);
   const navigate = useNavigate();
-  const { searchTerm } = useParams();
   const dispatch = useDispatch();
+  const { searchResults, isLoading } = useSelector(
+    (state) => state.foodReducer
+  );
 
-  useEffect(() => {
-    if (searchTerm) {
-      setTerm(searchTerm);
-      dispatch(searchFoods(searchTerm)); // Dispatch searchFoods when searchTerm changes
-    } else {
-      setTerm("");
-    }
-  }, [searchTerm, dispatch]);
-
-  const search = () => {
-    if (term) {
-      navigate("/search/" + term);
-      dispatch(searchFoods(term)); // Dispatch searchFoods when searching
-    } else {
-      navigate("/");
-    }
+  const useQuery = () => {
+    return new URLSearchParams(useLocation().search);
   };
+
+  const query = useQuery().get("query");
+
+  if (!searchResults || searchResults.length === 0)
+    return <p>No products found</p>;
+
   return (
-    <div className="w-full px-4 flex justify-center sm:hidden md:flex">
-      <input
-        type="text"
-        className="border-2 border-red-300 p-2 rounded-3xl focus:outline-none"
-        placeholder="Search Bring Food!"
-        onChange={(e) => setTerm(e.target.value)}
-        onKeyUp={(e) => e.key === "Enter" && search()}
-        value={term}
-      />
-      <button
-        onClick={() => search()}
-        className="text-white hover:bg-red-300 transition-colors px-2 rounded-3xl -ml-8 bg-red-500"
-      >
-        Search
-      </button>
+    <div className="container mx-auto relative h-[90vh] overflow-y-scroll my-4">
+      {" "}
+      {/* Main wrapper */}
+      <h1 className="text-2xl font-semibold mb-4">
+        Search Results for "{query}"
+      </h1>
+      {isLoading && <Searching />}
+      <div className="absolute w-full bg-white shadow-lg rounded-lg z-10 mt-2">
+        <ul className="flex flex-col p-4 space-y-4">
+          {searchResults.map((product) => (
+            <li
+              key={product._id}
+              onClick={() => {
+                dispatch(fetchFoodById(product?._id));
+                navigate("/food");
+              }}
+              className="flex items-center border p-4 rounded-lg hover:shadow-lg transition-shadow cursor-pointer"
+            >
+              {/* Product Image */}
+              <img
+                src={`productImages/${product.image}`}
+                alt={product.name}
+                className="w-24 h-24 object-cover rounded-md flex-shrink-0 mr-4"
+              />
+
+              {/* Product Details */}
+              <div className="flex-grow">
+                <h2 className="text-lg font-semibold text-primary">
+                  {product.name}
+                </h2>
+                <p className="text-gray-500">{product.description}</p>
+                <p className="text-green-600 font-bold mt-1">
+                  Price: ${product.price}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
 
-export default Search;
+export default SearchPage;

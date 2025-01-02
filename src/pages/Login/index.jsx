@@ -4,6 +4,8 @@ import { toast } from "react-toastify"; // For notifications
 import "react-toastify/dist/ReactToastify.css"; // For notifications
 import GoogleLogin from "../../components/LoginMethod/GoogleLogin";
 import FacebookLogin from "../../components/LoginMethod/FacebookLogin";
+import { useDispatch, useSelector } from "react-redux";
+import { loginUser } from "../../features/userSlice";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +14,8 @@ const LoginPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const { error } = useSelector((state) => state.userReducer);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,17 +29,18 @@ const LoginPage = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    try {
-      // Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Login successful!");
-      navigate("/"); // Redirect to dashboard or another page
-    } catch (error) {
-      toast.error("Login failed. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // Dispatch the login action
+    dispatch(loginUser({ email: formData.email, password: formData.password }))
+      .unwrap()
+      .then(() => {
+        setIsSubmitting(false);
+        toast.success("Login Successfull!");
+        navigate("/"); // Change this to your login page route
+      })
+      .catch((e) => {
+        setIsSubmitting(false);
+        toast.error(e);
+      });
   };
 
   return (

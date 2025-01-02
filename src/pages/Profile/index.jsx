@@ -1,62 +1,71 @@
 import React, { useEffect, useState } from "react";
+import useAuth from "../../useAuth";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchOrders } from "../../features/orderSlice";
 
 const Profile = () => {
-  const [user, setUser] = useState({});
+  const userInfo = useSelector((state) => state.userReducer.userInfo?.user);
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  const googleUser = useAuth(); // Optional hook to get current user info
+  const dispatch = useDispatch();
+  const [user, setUser] = useState({
+    username: "",
+    email: "",
+    photoURL: "",
+    role: "user",
+  });
 
-  const storedUserInfo = JSON.parse(localStorage.getItem("userInfo"));
-  console.log(storedUserInfo);
-  // Sample usage
-  // Pass this data to the Profile component as props
   useEffect(() => {
-    // To retrieve and log the data later
-    setUser({
-      displayName: storedUserInfo.displayName,
-      email: storedUserInfo.email,
-      photoURL: storedUserInfo.photoURL,
-      createdAt: storedUserInfo.createdAt,
-      lastLoginAt: storedUserInfo.lastLoginAt,
-    });
-    console.log(user);
-  }, []);
+    if (googleUser) {
+      setUser({
+        username: googleUser?.displayName,
+        email: googleUser?.email,
+        photoURL: googleUser?.photoURL,
+        role: googleUser?.email.endsWith("@gmail.com") ? "admin" : "user",
+      });
+    } else {
+      setUser({
+        username: userInfo?.username,
+        email: userInfo?.email,
+        photoURL: "",
+        role: userInfo?.role,
+      });
+    }
+  }, [googleUser]);
 
-  const orders = [
-    {
-      orderId: "12345",
-      productName: "Wireless Mouse",
-      quantity: 2,
-      price: 25.99,
-      orderDate: "2024-11-15",
-    },
-    {
-      orderId: "67890",
-      productName: "Gaming Keyboard",
-      quantity: 1,
-      price: 49.99,
-      orderDate: "2024-11-20",
-    },
-  ];
+  const { orders } = useSelector((state) => state.orderReducer);
+  useEffect(() => {
+    dispatch(fetchOrders());
+    console.log(userInfo);
+    // filter with logged user orders
+    if (userInfo) {
+      const filteredOrders = orders.filter(
+        (order) => order?.customerName === userInfo?.username
+      );
+      setFilteredOrders(filteredOrders);
+    } else {
+      setFilteredOrders([]);
+    }
+  }, []);
+  console.log(filteredOrders);
+
   return (
     <div className="container mx-auto h-screen bg-slate-100 p-8">
       <div className="bg-white shadow-md rounded-lg p-6">
         {user ? (
           <div className="flex items-center space-x-6">
-            <img
-              src={user.photoURL}
-              alt={`${user.displayName}'s profile`}
-              className="w-24 h-24 rounded-full"
-            />
+            {user.photoURL ? (
+              <img
+                src={user.photoURL}
+                alt={user.username?.slice(0, 1)}
+                className="size-20  rounded-full border border-gray-200"
+              />
+            ) : null}
             <div>
-              <h1 className="text-2xl font-bold text-gray-700">
-                {user.displayName}
+              <h1 className="text-2xl font-bold text-gray-700 uppercase">
+                {user.username}
               </h1>
               <p className="text-gray-500">{user.email}</p>
-              <p className="text-gray-500">
-                Joined: {new Date(Number(user.createdAt)).toLocaleDateString()}
-              </p>
-              <p className="text-gray-500">
-                Last Login:{" "}
-                {new Date(Number(user.lastLoginAt)).toLocaleString()}
-              </p>
             </div>
           </div>
         ) : (
@@ -72,31 +81,52 @@ const Profile = () => {
           <table className="table-auto w-full text-left text-gray-700">
             <thead className="bg-gray-200">
               <tr>
-                <th className="px-4 py-2">Order ID</th>
-                <th className="px-4 py-2">Product Name</th>
-                <th className="px-4 py-2">Quantity</th>
-                <th className="px-4 py-2">Price</th>
-                <th className="px-4 py-2">Order Date</th>
+                <th className="px-4 py-2 border-b">Order ID</th>
+                <th className="px-4 py-2 border-b">Customer Name</th>
+                <th className="px-4 py-2 border-b">Email</th>
+                <th className="px-4 py-2 border-b">Shipping Address</th>
+                <th className="px-4 py-2 border-b">Products</th>
+                <th className="px-4 py-2 border-b">Total Amount</th>
+                <th className="px-4 py-2 border-b">Order Status</th>
+                <th className="px-4 py-2 border-b">Order Date</th>
               </tr>
             </thead>
-            <tbody>
-              {orders.map((order, index) => (
-                <tr
-                  key={index}
-                  className={`${index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
-                >
-                  <td className="px-4 py-2">{order.orderId}</td>
-                  <td className="px-4 py-2">{order.productName}</td>
-                  <td className="px-4 py-2">{order.quantity}</td>
-                  <td className="px-4 py-2">${order.price.toFixed(2)}</td>
-                  <td className="px-4 py-2">
-                    {new Date(order.orderDate).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
+            <tbody className="text-xs">
+              {user &&
+                filteredOrders.map((order, index) => (
+                  <tr
+                    key={index}
+                    className={`${index % 2 === 0 ? "bg-gray-50" : "bg-white"}`}
+                  >
+                    <td className="px-4 py-2 border-b">{order._id}</td>
+                    <td className="px-4 py-2 border-b">{order.customerName}</td>
+                    <td className="px-4 py-2 border-b">
+                      {order.customerEmail}
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      {order.shippingAddress}
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      <ul>
+                        {order.orderedProducts.map((product) => (
+                          <li key={product._id}>
+                            {product.productId.name} (x{product.quantity})
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td className="px-4 py-2 border-b">
+                      ${order.totalAmount.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 border-b">{order.orderStatus}</td>
+                    <td className="px-4 py-2 border-b">
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
-          {orders.length === 0 && (
+          {filteredOrders.length === 0 && (
             <p className="text-center py-4 text-gray-500">No orders found.</p>
           )}
         </div>

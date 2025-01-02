@@ -1,35 +1,89 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
-import { sample_foods, sample_tags } from "../data";
+import { sample_foods } from "../data";
+
+const baseUrl = "http://localhost:5000/api/foods";
 
 // Async Thunk to fetch all foods from the backend
 export const fetchAllFoods = createAsyncThunk(
   "food/fetchAllFoods",
   async () => {
-    const response = await axios.get("http://localhost:5000/api/foods/");
-    return response.data;
+    try {
+      const response = await axios.get(baseUrl);
+      return response.data;
+    } catch (error) {
+      return sample_foods;
+    }
+  }
+);
+
+// Async thunk for creating a new food
+export const createFood = createAsyncThunk(
+  "foods/createFood",
+  async (newFood, { rejectWithValue }) => {
+    try {
+      const response = await axios.post(baseUrl, newFood);
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data.message) {
+        return rejectWithValue(error.response.data.message);
+      } else {
+        return rejectWithValue(error.message);
+      }
+    }
+  }
+);
+
+// Async thunk for updating a food
+export const updateFood = createAsyncThunk(
+  "foods/updateFood",
+  async ({ id, updatedFood }, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(`${baseUrl}/${id}`, updatedFood);
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data.message) {
+        return rejectWithValue(error.response.data.message);
+      } else {
+        return rejectWithValue(error.message);
+      }
+    }
+  }
+);
+
+// Async thunk for deleting a food
+export const deleteFood = createAsyncThunk(
+  "foods/deleteFood",
+  async (id, { rejectWithValue }) => {
+    try {
+      const response = await axios.delete(`${baseUrl}/${id}`);
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.data.message) {
+        return rejectWithValue(error.response.data.message);
+      } else {
+        return rejectWithValue(error.message);
+      }
+    }
   }
 );
 
 // Async Thunk to search foods by term from the backend
 export const searchFoods = createAsyncThunk(
   "food/searchFoods",
-  async (searchTerm) => {
-    const response = await axios.get(
-      `http://localhost:5000/api/foods/search/${searchTerm}`
-    );
-    return response.data;
-  }
-);
+  async ({ query, category }, { rejectWithValue }) => {
+    try {
+      // Build query string dynamically
+      const queryString = new URLSearchParams({
+        ...(query && { query }), // Add query if it exists
+        ...(category && { category }), // Add category if it exists
+      }).toString();
 
-// Async Thunk to fetch foods by tag from the backend
-export const fetchFoodsByTag = createAsyncThunk(
-  "food/fetchFoodsByTag",
-  async (tag) => {
-    const response = await axios.get(
-      `http://localhost:5000/api/foods/tag/${tag}`
-    );
-    return response.data;
+      const res = await axios.get(`${baseUrl}/search?${queryString}`);
+      return res.data.payload; // Assuming `payload` contains the array of products
+    } catch (error) {
+      return rejectWithValue(error.response.data);
+    }
   }
 );
 
@@ -37,99 +91,133 @@ export const fetchFoodsByTag = createAsyncThunk(
 export const fetchFoodById = createAsyncThunk(
   "food/fetchFoodById",
   async (foodId) => {
-    const response = await axios.get(
-      `http://localhost:5000/api/foods/${foodId}`
-    );
+    const response = await axios.get(`${baseUrl}/${foodId}`);
     return response.data;
   }
 );
 
-// Async Thunk to fetch all tags from the backend
-export const fetchAllTags = createAsyncThunk("food/fetchAllTags", async () => {
-  const response = await axios.get("http://localhost:5000/api/foods/tags");
-  return response.data;
-});
+// Async Thunk to fetch a single food by ID from the backend
+export const fetchFoodByCategory = createAsyncThunk(
+  "food/fetchFoodByCategory",
+  async (category) => {
+    const response = await axios.get(`${baseUrl}/category/${category}`);
+
+    return response.data;
+  }
+);
 
 // Initial state for the food slice
 const foodSlice = createSlice({
   name: "food",
   initialState: {
     foods: [], // Array to store fetched foods
-    tags: [], // Array to store fetched tags
     food: [], // Array to store fetched
-    status: "idle", // Status of the async actions (idle, loading, succeeded, failed)
+    searchResults: [], // Array to store search results
+    categories: [], // Array to store unique categories
+    isLoading: false, // Loading state to indicate if the request is pending
     error: null, // Error message if an async action fails
   },
   reducers: {},
   extraReducers: (builder) => {
     builder
-      // Handle fetchAllFoods async thunk
+      // Reducer to handle the fetchAllFoods async action
       .addCase(fetchAllFoods.pending, (state) => {
-        state.status = "loading"; // Set status to loading when the request is pending
+        state.isLoading = true;
       })
       .addCase(fetchAllFoods.fulfilled, (state, action) => {
-        state.status = "succeeded"; // Set status to succeeded when the request is successful
-        state.foods = action.payload; // Update the foods array with the fetched data
+        state.isLoading = false;
+        state.foods = action.payload;
+        state.categories = [
+          ...new Set(action.payload.map((food) => food.category)),
+        ]; // Extract unique categories
       })
       .addCase(fetchAllFoods.rejected, (state, action) => {
-        state.foods = sample_foods;
-        state.status = "failed"; // Set status to failed when the request fails
-        state.error = action.error.message; // Store the error message
+        state.isLoading = false;
+        state.foods = action.payload;
       })
 
-      // Handle searchFoods async thunk
+      // Reducer to handle the createFood async action
+      .addCase(createFood.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(createFood.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.foods.push(action.payload);
+      })
+      .addCase(createFood.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message;
+      })
+
+      // Reducer to handle the updateFood async action
+      .addCase(updateFood.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(updateFood.fulfilled, (state, action) => {
+        state.isLoading = false;
+        const index = state.foods.findIndex(
+          (food) => food._id === action.payload._id
+        );
+        if (index !== -1) {
+          state.foods[index] = action.payload;
+        }
+      })
+      .addCase(updateFood.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message;
+      })
+
+      // Reducer to handle the deleteFood async action
+      .addCase(deleteFood.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(deleteFood.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.foods = state.foods.filter(
+          (food) => food._id !== action.meta.arg
+        );
+      })
+      .addCase(deleteFood.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message;
+      })
+
+      // Reducer to handle the searchFoods async action
       .addCase(searchFoods.pending, (state) => {
-        state.status = "loading"; // Set status to loading when the request is pending
+        state.isLoading = true;
       })
       .addCase(searchFoods.fulfilled, (state, action) => {
-        state.status = "succeeded"; // Set status to succeeded when the request is successful
-        state.foods = action.payload; // Update the foods array with the fetched data
+        state.isLoading = false;
+        state.searchResults = action.payload; // Store search results in searchResults state
       })
       .addCase(searchFoods.rejected, (state, action) => {
-        state.status = "failed"; // Set status to failed when the request fails
-        state.error = action.error.message; // Store the error message
+        state.isLoading = false;
+        state.error = action.error.message;
       })
 
-      // Handle fetchFoodsByTag async thunk
-      .addCase(fetchFoodsByTag.pending, (state) => {
-        state.status = "loading"; // Set status to loading when the request is pending
-      })
-      .addCase(fetchFoodsByTag.fulfilled, (state, action) => {
-        console.log(action);
-        state.status = "succeeded"; // Set status to succeeded when the request is successful
-        state.foods = action.payload;
-        console.log(state.foods); // Update the foods array with the fetched data
-      })
-      .addCase(fetchFoodsByTag.rejected, (state, action) => {
-        state.status = "failed"; // Set status to failed when the request fails
-        state.error = action.error.message; // Store the error message
-      })
-
-      // Handle fetchFoodById async thunk
+      // Reducer to handle the fetchFoodById async action
       .addCase(fetchFoodById.pending, (state) => {
-        state.status = "loading"; // Set status to loading when the request is pending
+        state.isLoading = true;
       })
       .addCase(fetchFoodById.fulfilled, (state, action) => {
-        state.status = "succeeded"; // Set status to succeeded when the request is successful
-        state.food = action.payload; // Update the foods array with the single fetched food
+        state.isLoading = false;
+        state.food = action.payload;
       })
       .addCase(fetchFoodById.rejected, (state, action) => {
-        state.status = "failed"; // Set status to failed when the request fails
-        state.error = action.error.message; // Store the error message
+        state.isLoading = false;
+        state.error = action.error.message;
       })
-
-      // Handle fetchAllTags async thunk
-      .addCase(fetchAllTags.pending, (state) => {
-        state.status = "loading"; // Set status to loading when the request is pending
+      // Reducer to handle the fetchFoodById async action
+      .addCase(fetchFoodByCategory.pending, (state) => {
+        state.isLoading = true;
       })
-      .addCase(fetchAllTags.fulfilled, (state, action) => {
-        state.status = "succeeded"; // Set status to succeeded when the request is successful
-        state.tags = action.payload; // Update the tags array with the fetched data
+      .addCase(fetchFoodByCategory.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.foods = action.payload;
       })
-      .addCase(fetchAllTags.rejected, (state, action) => {
-        state.tags = sample_tags; // Update the tags array with sample data if the request fails
-        state.status = "failed"; // Set status to failed when the request fails
-        state.error = action.error.message; // Store the error message
+      .addCase(fetchFoodByCategory.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.error.message;
       });
   },
 });

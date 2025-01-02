@@ -10,6 +10,27 @@
     @apply bg-red-500 hover:bg-red-700 text-white py-2 px-4 rounded-md;
   }
 }
+@import url("https://fonts.googleapis.com/css2?family=Playwrite+AU+SA:wght@100..400&display=swap");
+.fontTitle {
+  font-family: "Playwrite AU SA", serif;
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-style: normal;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Playwrite+IS:wght@100..400&display=swap");
+.fontSpecial {
+  font-family: "Playwrite IS", serif;
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-style: normal;
+}
+/* set category bg image  */
+.categoryBG {
+  background-image: url("./assets/categoryBG.jpg");
+  background-size: cover;
+  background-position: center;
+}
 
 .flexCenter {
   display: flex;

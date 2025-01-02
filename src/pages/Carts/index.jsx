@@ -9,6 +9,7 @@ const CartPage = () => {
   const { item, totalPrice, totalCount } = useSelector(
     (state) => state.cartReducer
   );
+
   const dispatch = useDispatch();
 
   const handleQuantityChange = (id, quantity) => {
@@ -30,11 +31,14 @@ const CartPage = () => {
         <div className="flex">
           <ul className="rounded-lg border-[0.1px] border-gray-300 p-4">
             {item.map((itm) => (
-              <li key={itm.id} className="flex py-2 justify-start items-center">
+              <li
+                key={itm._id}
+                className="flex py-2 justify-start items-center"
+              >
                 <div className="w-20 px-1.5">
                   <img
                     className="w-full h-16 rounded-full"
-                    src={`/foods/${itm.imgUrl}`}
+                    src={`/productImages/${itm.image}`}
                     alt={itm.name}
                   />
                 </div>
@@ -44,7 +48,7 @@ const CartPage = () => {
                 <div className="w-32 text-center flex items-center">
                   <button
                     onClick={() =>
-                      handleQuantityChange(itm.id, itm.quantity - 1)
+                      handleQuantityChange(itm._id, itm.quantity - 1)
                     }
                     className="px-2 py-1 bg-gray-200 rounded-l-lg"
                   >
@@ -53,7 +57,7 @@ const CartPage = () => {
                   <span className="px-4">{itm.quantity}</span>
                   <button
                     onClick={() =>
-                      handleQuantityChange(itm.id, itm.quantity + 1)
+                      handleQuantityChange(itm._id, itm.quantity + 1)
                     }
                     className="px-2 py-1 bg-gray-200 rounded-r-lg"
                   >
@@ -64,7 +68,7 @@ const CartPage = () => {
                   <span>{" " + itm.price + "$"}</span>
                 </div>
                 <div className="text-red-500 bg-gray-200 rounded-2xl hover:bg-gray-100 w-32 text-center">
-                  <button onClick={() => handleRemove(itm.id)}>Remove</button>
+                  <button onClick={() => handleRemove(itm._id)}>Remove</button>
                 </div>
               </li>
             ))}

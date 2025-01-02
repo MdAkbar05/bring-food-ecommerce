@@ -1,20 +1,68 @@
-import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { useSelector } from "react-redux";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
 import GoogleLogout from "../../components/LoginMethod/GoogleLogout";
 import useAuth from "../../useAuth"; // Optional: to track the logged-in user
+import {
+  FaCartArrowDown,
+  FaUserCircle,
+  FaSearch,
+  FaSignOutAlt,
+  FaSignInAlt,
+} from "react-icons/fa";
 
 import logo from "../../assets/logo.png";
 import Search from "../../components/Search/Search";
+import { logoutUser } from "../../features/userSlice";
+import { searchFoods } from "../../features/foodSlice";
 
 const Header = () => {
   const [clickUser, setClickUser] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearch, setIsSearch] = React.useState(true);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+  const userInfo = useSelector((state) => state.userReducer.userInfo?.user);
+  const googleUser = useAuth(); // Optional hook to get current user info
+  const [user, setUser] = useState({
+    username: "",
+    email: "",
+    photoURL: "",
+    role: "user",
+  });
 
-  const user = useAuth(); // Optional hook to get current user info
+  useEffect(() => {
+    if (googleUser) {
+      setUser({
+        username: googleUser?.displayName,
+        email: googleUser?.email,
+        photoURL: googleUser?.photoURL,
+        role: googleUser?.email.endsWith("@gmail.com") ? "admin" : "user",
+      });
+    } else {
+      setUser({
+        username: userInfo?.username,
+        email: userInfo?.email,
+        photoURL: "",
+        role: userInfo?.role,
+      });
+    }
+  }, [googleUser, userInfo, dispatch]);
   console.log(user);
 
   const { totalCount } = useSelector((state) => state.cartReducer);
+
+  const handleSearchChange = (e) => {
+    const query = e.target.value.trim();
+    if (query === "") {
+      return;
+    }
+    // Dispatch the search action
+    dispatch(searchFoods({ query }));
+
+    // Navigate to the search results page (you can use a dedicated search results page)
+    navigate(`/search?query=${query}`);
+  };
 
   return (
     <header className="sticky top-0 backdrop-blur-md py-2 bg-white z-50">
@@ -22,16 +70,34 @@ const Header = () => {
         {/* Logo Section */}
         <Link to="/" className="flex items-center w-1/6">
           <img src={logo} className="w-auto h-10" alt="logo" />
-          <span className="ml-2 text-lg font-semibold">Bring Food!</span>
+          <span className="ml-2 md:text-xl sm:text-base font-semibold">
+            Bring Food!
+          </span>
         </Link>
 
         {/* Search Component (Visible on large screens) */}
-        <div className="sm:hidden md:flex lg:flex-grow">
-          <Search />
+        <div className=" md:flex lg:flex-grow flexCenter">
+          {/* Search bar  */}
+          <div className="flexCenter gap-2 ">
+            <input
+              type="text"
+              onChange={handleSearchChange}
+              className={`sm:w-24 md:w-64 lg:w-96 border-2 border-section md:p-2 sm:p-2 rounded-3xl bg-section focus:outline-none focus:outline-primary ${
+                isSearch ? `flex` : `hidden`
+              }`}
+              placeholder="Search..."
+            />
+            <FaSearch
+              className="-ml-10 cursor-pointer text-primary"
+              onClick={() => setIsSearch(!isSearch)}
+              size={24}
+              color="gray"
+            />
+          </div>
         </div>
 
         {/* Hamburger Menu Icon (Visible on small screens) */}
-        <div className="lg:hidden flex items-center">
+        <div className="lg:hidden sm:flex items-center">
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="text-gray-700 focus:outline-none"
@@ -77,31 +143,48 @@ const Header = () => {
           } lg:flex items-center  lg:justify-center lg:ml-4 transition-all duration-300 ease-in-out lg:w-auto`}
         >
           <ul className="flex sm:flex-col sm:items-end lg:flex-row lg:gap-4 list-none lg:items-center">
-            {user ? (
+            {user.username ? (
               <>
-                <li
-                  className="relative lg:flex lg:items-center gap-2"
-                  onClick={() => setClickUser(!clickUser)}
-                >
-                  <img
-                    src={user.photoURL}
-                    alt={user.displayName.slice(0, 2)}
-                    className="w-auto h-6 rounded-full"
-                  />
-                  <button className="nav-link">
-                    {user.displayName.slice(0, 2)}
+                <li className="relative lg:flex lg:items-center gap-2">
+                  {user.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt={user.username?.slice(0, 1)}
+                      className="size-6  rounded-full border border-gray-200"
+                    />
+                  ) : null}
+                  <button
+                    className="nav-link font-medium uppercase"
+                    onClick={() => setClickUser(!clickUser)}
+                  >
+                    {user.username?.slice(0, 2)}
                   </button>
+
                   {clickUser && (
                     <div className="flex flex-col gap-2 absolute bg-white border shadow-lg p-2 mt-2 right-0 top-5 z-50">
                       <Link className="nav-link" to="/profile">
                         Profile
                       </Link>
-                      <Link className="nav-link" to="/orders">
-                        Orders
-                      </Link>
-                      <GoogleLogout />
+
+                      {googleUser ? (
+                        <GoogleLogout />
+                      ) : (
+                        <button
+                          className="px-2 py-1 bg-red-500 rounded-md text-white"
+                          onClick={() => dispatch(logoutUser())}
+                        >
+                          Logout
+                        </button>
+                      )}
                     </div>
                   )}
+                </li>
+                <li>
+                  {user.role === "admin" ? (
+                    <Link to="/admin" className="nav-link md:flex hidden">
+                      Admin
+                    </Link>
+                  ) : null}
                 </li>
               </>
             ) : (
@@ -131,9 +214,9 @@ const Header = () => {
       </nav>
 
       {/* Search for small devices (300px to 614px) */}
-      <div className="lg:hidden mt-2 px-4">
+      {/* <div className="lg:hidden mt-2 px-4">
         <Search />
-      </div>
+      </div> */}
     </header>
   );
 };

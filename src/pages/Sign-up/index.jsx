@@ -2,8 +2,11 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify"; // For notifications
 import "react-toastify/dist/ReactToastify.css"; // For notifications
+import { useDispatch } from "react-redux";
+import { registerUser } from "../../features/userSlice";
 
 const SignUp = () => {
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -24,17 +27,23 @@ const SignUp = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    try {
-      // Replace with actual API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success("Registration successful!");
-      navigate("/login"); // Redirect to login page
-    } catch (error) {
-      toast.error("Registration failed. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    dispatch(
+      registerUser({
+        username: formData.name,
+        email: formData.email,
+        password: formData.password,
+      })
+    )
+      .unwrap()
+      .then(() => {
+        setIsSubmitting(false);
+        toast.success("Account created successfully!");
+        navigate("/login"); // Change this to your login page route
+      })
+      .catch((error) => {
+        setIsSubmitting(false);
+        toast.error(error);
+      });
   };
 
   return (
